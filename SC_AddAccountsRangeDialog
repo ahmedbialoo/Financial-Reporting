@@ -1,0 +1,186 @@
+[Form]
+public class SC_AddAccountsRangeDialog extends FormRun
+{
+    SC_Category             passedCategory;
+    SC_MainAccountsDim      passedMainAccountsDim;
+    SC_CategoryId           categoryId;
+    str                     callerMenuItemName;
+    /// <summary>
+    ///
+    /// </summary>
+    public void init()
+    {
+        super();
+        switch (this.args().dataset())
+        {
+            case tableNum(SC_Category):
+                passedCategory = this.args().record();
+                categoryId  = passedCategory.CategoryId;
+                break;
+
+            //case tableNum(SC_CategoryMainAccounts):
+            //    passedCategoryMainAccounts = this.args().record();
+            //    categoryId  = passedCategoryMainAccounts.CategoryId;
+            //    break;
+            case tableNum(SC_MainAccountsDim):
+                SC_CategoryMainAccounts categoryMainAccounts;
+                passedMainAccountsDim = this.args().record();
+                select CategoryId from categoryMainAccounts
+                    where categoryMainAccounts.RecId == passedMainAccountsDim.CategoryMainAccounts;
+                categoryId  = categoryMainAccounts.CategoryId;
+                break;
+        }
+
+        callerMenuItemName = this.args().menuItemName();
+        if (callerMenuItemName == menuItemDisplayStr(SC_AddAccountsRangeDialog) || callerMenuItemName == menuItemDisplayStr(SC_DeleteAccountsRangeDialog))
+        {
+            DimensionGroup.visible(false);
+        }
+        if(callerMenuItemName == menuItemDisplayStr(SC_DeleteDimensionDialog))
+        {
+            DimensionAttribute.text(passedMainAccountsDim.DimensionAttribute);
+            DimensionValue.text(passedMainAccountsDim.DimensionValue);
+        }
+        if( OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::IsBetween) ||
+                OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::IsBetweenAndInclude))
+                Through.visible(true);
+        else
+                Through.visible(false);
+
+        if( OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::AllAccounts))
+        {
+            Through.visible(false);
+            Value.visible(false);
+        }
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public void closeOk()
+    {
+        super();
+        switch (callerMenuItemName)
+        {
+            case menuItemDisplayStr(SC_AddAccountsRangeDialog):
+                SC_MainAccDim_Handler::addAccountByCriteria(OperatorCriteria.valueStr(),Value.valueStr(),Through.valueStr(),categoryId);
+                break;
+
+            case menuItemDisplayStr(SC_DeleteAccountsRangeDialog):
+                SC_MainAccDim_Handler::deleteByCriteria(OperatorCriteria.valueStr(),Value.valueStr(),Through.valueStr(),categoryId);
+                break;
+            case menuItemDisplayStr(SC_AddDimensionDialog):
+                SC_MainAccDim_Handler::addDimensionByCriteria(OperatorCriteria.valueStr(),Value.valueStr(),Through.valueStr(),DimensionAttribute.valueStr(),DimensionValue.valueStr(),categoryId);
+                break;
+            case menuItemDisplayStr(SC_DeleteDimensionDialog):
+                SC_MainAccDim_Handler::deleteDimensionByCriteria(OperatorCriteria.valueStr(),Value.valueStr(),Through.valueStr(),categoryId,DimensionAttribute.valueStr(),DimensionValue.valueStr());
+                break;
+        }
+        
+        
+
+    }
+
+    [Control("ComboBox")]
+    class OperatorCriteria
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        public boolean modified()
+        {
+            boolean ret;
+    
+            ret = super();
+
+            if( OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::IsBetween) ||
+                OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::IsBetweenAndInclude))
+                Through.visible(true);
+            else
+                Through.visible(false);
+
+            if( OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::AllAccounts))
+            {
+                Through.visible(false);
+                Value.visible(false);
+            }
+            return ret;
+        }
+
+    }
+
+    [Control("String")]
+    class Value
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            super();
+            if( OperatorCriteria.valueStr() != enum2Str(SC_OperatorCriteria::EndsWith) ||
+                OperatorCriteria.valueStr() != enum2Str(SC_OperatorCriteria::BeginsWith))
+                SC_MainAccDim_Handler::lookupMainAccount(this);
+        }
+
+    }
+
+    [Control("String")]
+    class Through
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            super();
+            if( OperatorCriteria.valueStr() != enum2Str(SC_OperatorCriteria::EndsWith) ||
+                OperatorCriteria.valueStr() != enum2Str(SC_OperatorCriteria::BeginsWith))
+                SC_MainAccDim_Handler::lookupMainAccount(this);
+        }
+
+    }
+
+    [Control("String")]
+    class DimensionAttribute
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            SC_MainAccDim_Handler::lookupDimAttribute(this);
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        public boolean modified()
+        {
+            boolean ret;
+        
+            ret = super();
+
+            SC_MainAccDim_Handler::dimensionAttributeName = this.valueStr();
+        
+            return ret;
+        }
+
+    }
+
+    [Control("String")]
+    class DimensionValue
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            SC_MainAccDim_Handler::dimensionAttValueLookup(this);
+        }
+
+    }
+
+}
