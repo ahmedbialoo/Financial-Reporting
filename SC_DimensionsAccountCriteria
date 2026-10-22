@@ -1,0 +1,67 @@
+public class SC_DimensionsAccountCriteria extends common
+{
+    /// <summary>
+    ///
+    /// </summary>
+    public void insert()
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+        SC_MainAccountsDim      mainAccountsDim;
+        str dimensionAttribute = this.DimensionAttribute;
+        str dimensionValue = this.DimensionValue;
+        super();
+
+        insert_recordset mainAccountsDim(DimensionAccountCriteria,CategoryMainAccounts,DimensionAttribute,DimensionValue)
+           select MainAccountsCriteria,RecId, dimensionAttribute,dimensionValue
+            from categoryMainAccounts
+            where categoryMainAccounts.MainAccountsCriteria == this.CategoryAccountsCriteria;
+
+    }
+
+    public void update()
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+        SC_MainAccountsDim      mainAccountsDim;
+        str dimensionAttribute = this.DimensionAttribute;
+        str dimensionValue = this.DimensionValue;
+        super();
+
+        delete_from mainAccountsDim
+            where mainAccountsDim.DimensionAccountCriteria == this.CategoryAccountsCriteria;
+        
+        insert_recordset mainAccountsDim(DimensionAccountCriteria,CategoryMainAccounts,DimensionAttribute,DimensionValue)
+           select MainAccountsCriteria,RecId, dimensionAttribute,dimensionValue
+            from categoryMainAccounts
+            where categoryMainAccounts.MainAccountsCriteria == this.CategoryAccountsCriteria;}
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name = "_fieldIdToCheck"></param>
+    /// <returns></returns>
+    public boolean validateField(FieldId _fieldIdToCheck)
+    {
+        DimensionAttribute      dimensionAttribute;
+        DimensionAttributeValue dimensionAttributeValue;
+        boolean ret;
+    
+        ret = super(_fieldIdToCheck);
+
+        
+        switch(_fieldIdToCheck)
+        {
+            case fieldNum(SC_DimensionsAccountCriteria,DimensionValue):
+                dimensionAttribute = DimensionAttribute::findByName(this.DimensionAttribute);
+
+                select firstonly dimensionAttributeValue
+                    where dimensionAttributeValue.DisplayValue == this.DimensionValue &&
+                    dimensionAttributeValue.DimensionAttribute == dimensionAttribute.RecId;
+                if(dimensionAttributeValue.RecId == 0 )
+                    ret = checkFailed("Invalid Dimension Value");
+                break;
+        }
+    
+        return ret;
+    }
+
+}
