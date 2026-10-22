@@ -1,0 +1,140 @@
+[Form]
+public class SC_CatMainAccDimSetup extends FormRun
+{
+ 
+
+    [DataSource]
+    class SC_CategoryAccountsCriteria
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        public int active()
+        {
+            int ret;
+    
+            ret = super();
+            SC_CategoryAccountsCriteria current = this.cursor();
+
+            if( current.OperatorCriteria == SC_OperatorCriteria::IsBetween ||
+                current.OperatorCriteria  == SC_OperatorCriteria::IsBetweenAndInclude)
+            {
+                SC_CategoryAccountsCriteria_Through.allowEdit(true);
+                SC_CategoryAccountsCriteria_Value.allowEdit(true);
+
+            }
+            else if( current.OperatorCriteria  == SC_OperatorCriteria::AllAccounts)
+            {
+                SC_CategoryAccountsCriteria_Value.allowEdit(false);
+                SC_CategoryAccountsCriteria_Through.allowEdit(false);
+            }
+            else
+            {
+                SC_CategoryAccountsCriteria_Through.allowEdit(false);
+                SC_CategoryAccountsCriteria_Value.allowEdit(true);
+
+            }
+            
+            
+            return ret;
+        }
+
+    }
+
+    [Control("ComboBox")]
+    class SC_CategoryAccountsCriteria_OperatorCriteria
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        public boolean modified()
+        {
+            boolean ret;
+        
+            ret = super();
+            SC_CategoryAccountsCriteria_ds.active();
+           
+            return ret;
+        }
+
+    }
+
+    [Control("String")]
+    class SC_CategoryAccountsCriteria_Value
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            if(SC_CategoryAccountsCriteria_OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::BeginsWith) ||
+                SC_CategoryAccountsCriteria_OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::EndsWith) ||
+                SC_CategoryAccountsCriteria_OperatorCriteria.valueStr() == enum2Str(SC_OperatorCriteria::IsLike))
+                return;
+            MainAccount::lookupMainAccount(this);
+            //SC_MainAccDim_Handler::lookupMainAccount(this);
+
+        }
+
+    }
+
+    [Control("String")]
+    class SC_CategoryAccountsCriteria_Through
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            MainAccount::lookupMainAccount(this);
+
+            //SC_MainAccDim_Handler::lookupMainAccount(this);
+
+        }
+
+    }
+
+    [Control("String")]
+    class SC_DimensionsAccountCriteria_DimensionAttribute
+    {
+        /// <summary>
+        ///
+        /// </summary>
+        public void lookup()
+        {
+            SC_MainAccDim_Handler::lookupDimAttribute(this);
+
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns></returns>
+        public boolean modified()
+        {
+            boolean ret;
+        
+            ret = super();
+        
+            SC_DimensionsAccountCriteria mainAccountsDim = SC_DimensionsAccountCriteria_ds.cursor();
+        
+            SC_MainAccDim_Handler::dimensionAttributeName = mainAccountsDim.DimensionAttribute;
+            return ret;
+        }
+
+    }
+
+    [Control("String")]
+    class SC_DimensionsAccountCriteria_DimensionValue
+    {
+         //</summary>
+        public void lookup()
+        {
+            SC_MainAccDim_Handler::dimensionAttValueLookup(this);
+        }
+
+    }
+
+}
