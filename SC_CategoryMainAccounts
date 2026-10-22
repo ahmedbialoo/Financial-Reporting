@@ -1,0 +1,19 @@
+public class SC_CategoryMainAccounts extends common
+{
+    /// <summary>
+    ///
+    /// </summary>
+    private boolean Exist( MainAccountNum _mainAccountId)
+    {
+        SC_CategoryMainAccounts _categoryMainAccounts;
+        if(_mainAccountId != '')
+        {
+            select firstonly RecId
+                from _categoryMainAccounts
+                where _categoryMainAccounts.MainAccountId == _mainAccountId;
+        }
+
+        return (_categoryMainAccounts.RecId != 0);
+    }
+
+}
