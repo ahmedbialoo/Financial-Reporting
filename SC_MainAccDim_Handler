@@ -1,0 +1,1047 @@
+internal final class SC_MainAccDim_Handler
+{
+    public static DimensionHierarchyId dimHierarchy;
+    public static str dimensionAttributeName;
+    
+ 
+    public static void process(SC_AccStructureAccountsTmp _tmp)
+    {
+        SC_MainAccDim_Handler mainAccDim_Handler = new SC_MainAccDim_Handler();
+        SC_AccStructureSegments accStructureSegmentsView;
+
+        while select accStructureSegmentsView
+            where accStructureSegmentsView.Name == curExt()
+        {
+            mainAccDim_Handler.loopSegmentsAndFillTmpData(accStructureSegmentsView.Level1 ,accStructureSegmentsView.DimensionHierarchy ,_tmp );
+        }
+
+    }
+
+    public void loopSegmentsAndFillTmpData(str _segment ,DimensionHierarchyId _dimensionHierarchy , SC_AccStructureAccountsTmp _tmp)
+    {
+        SC_MainAccDim_Handler mainAccDim_Handler = new SC_MainAccDim_Handler();
+        list segmentParts = SC_SegmentHandler::listOfSeparatedTxt(_segment,";");
+        ListEnumerator En = segmentParts.getEnumerator();
+
+        while(En.moveNext())
+        {
+            str segmentPart = En.current();
+            str partDefinision = SC_SegmentHandler::defineSegment(segmentPart);
+            mainAccDim_Handler.fillTmpData(partDefinision,segmentPart , _dimensionHierarchy , _tmp);
+        }
+    }
+
+    public void fillTmpData(str _partDefinision , str _segmentPart ,DimensionHierarchyId _dimensionHierarchy, SC_AccStructureAccountsTmp _tmp)
+    {
+        
+        MainAccount mainAccount;
+        switch (_partDefinision)
+        {
+            case SC_OperatorDefinition::hasEndStars:
+
+                //str txtBeforeStar = subStr(_segmentPart,1,strLen(_segmentPart)-1);
+                str txtBeforeStar = SC_SegmentHandler::extractBefore(_segmentPart,"*");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId like strFmt("%1*",txtBeforeStar);
+                break;
+
+            case SC_OperatorDefinition::isBetweenAndInclude:
+                container textObject;
+
+                textObject = SC_SegmentHandler::extractBeforeAfter(_segmentPart,"..");
+                
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId >= conPeek(textObject,1)&&
+                    mainAccount.MainAccountId <= conPeek(textObject,2);
+                 
+                break;
+            case SC_OperatorDefinition::hasStartEndStars:
+                str txtBetweenStars = SC_SegmentHandler::extractBetweenStars(_segmentPart);
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId like txtBetweenStars;
+                break;
+            case SC_OperatorDefinition::hasStartStars:
+                str txtAfterStar = SC_SegmentHandler::extractAfter(_segmentPart,"*");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId like strFmt("*%1",txtAfterStar);
+                break;
+            case SC_OperatorDefinition::isBetween:
+                container txtBeforeAndAfter = SC_SegmentHandler::extractBeforeAfter(_segmentPart,"<..<");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId > conPeek(txtBeforeAndAfter,1)&&
+                    mainAccount.MainAccountId < conPeek(txtBeforeAndAfter,2);
+                break;
+
+            case SC_OperatorDefinition::isGreaterThan:
+                str txtAfterGreaterThan = SC_SegmentHandler::extractAfter(_segmentPart,">");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId > txtAfterGreaterThan;
+                break;
+
+            case SC_OperatorDefinition::isGreaterThanAndInclude:
+                str txtbefore = SC_SegmentHandler::extractBefore(_segmentPart,"..*");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId >= txtbefore;
+                break;
+
+            case SC_OperatorDefinition::isLessThan:
+                str txtAfterLessThan = SC_SegmentHandler::extractAfter(_segmentPart,"<");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId < txtAfterLessThan;
+                break;
+
+            case SC_OperatorDefinition::isLessThanAndInclude:
+                str txtAfter = SC_SegmentHandler::extractAfter(_segmentPart,"*..");
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId <= txtAfterLessThan;
+                break;
+            case SC_OperatorDefinition::pureNumber:
+                insert_recordset _tmp(MainAccountId,AccountStructure)
+                    select MainAccountId , _dimensionHierarchy
+                    from mainAccount
+                    where mainAccount.MainAccountId == _segmentPart;
+                break;
+
+
+        }
+    }
+
+    public static void dimensionAttValueLookup(FormControl _callingControl)
+    {
+        SysTableLookup          sysTableLookup;
+        Query                   query = new Query();
+        QueryBuildDataSource    qbdsAttributeValue;
+        QueryBuildDataSource    qbdsAttribute;
+        str                     dimAttr = SC_MainAccDim_Handler::dimensionAttributeName;
+        // Create SysTableLookup on DimensionAttributeValue
+        sysTableLookup = SysTableLookup::newParameters(tableNum(DimensionAttributeValue), _callingControl);
+
+        sysTableLookup.addLookupfield(fieldNum(DimensionAttributeValue, DisplayValue));
+        sysTableLookup.addLookupfield(fieldNum(DimensionAttributeValue, DimensionAttribute));
+
+        // Join to DimensionAttribute to filter by dimension name
+        qbdsAttributeValue  = query.addDataSource(tableNum(DimensionAttributeValue));
+        qbdsAttribute       = qbdsAttributeValue.addDataSource(tableNum(DimensionAttribute));
+        qbdsAttribute.relations(false);
+        qbdsAttribute.joinMode(JoinMode::InnerJoin);
+        qbdsAttribute.addLink(fieldNum(DimensionAttributeValue, DimensionAttribute), fieldNum(DimensionAttribute, RecId));
+
+        // Filter by dimension name
+        qbdsAttribute.addRange(fieldNum(DimensionAttribute, Name)).value(queryValue(dimAttr));
+
+        sysTableLookup.parmQuery(query);
+        sysTableLookup.performFormLookup();
+    }
+
+    public static void lookupDimAttribute(FormControl _callingControl)
+    {
+        SysTableLookup          sysTableLookup;
+        Query                   query = new Query();
+        QueryBuildDataSource    qbdsAttribute;
+        DimensionAttributeRecId MainAccountAttr = DimensionAttribute::findByName("MainAccount").RecId;
+      
+        sysTableLookup = SysTableLookup::newParameters(tableNum(DimensionAttribute), _callingControl);
+
+        sysTableLookup.addLookupfield(fieldNum(DimensionAttribute, Name));
+
+        qbdsAttribute  = query.addDataSource(tableNum(DimensionAttribute));
+        
+        sysTableLookup.parmQuery(query);
+        sysTableLookup.performFormLookup();
+    }
+
+    public static void lookupMainAccount(FormControl _callingControl)
+    {
+        SysTableLookup          sysTableLookup;
+        Query                   query = new Query();
+        QueryBuildDataSource    MainAccountDS;
+        sysTableLookup = SysTableLookup::newParameters(tableNum(MainAccount), _callingControl);
+        MainAccountDS  = query.addDataSource(tableNum(MainAccount));
+        sysTableLookup.addLookupfield(fieldNum(MainAccount,MainAccountId));
+
+        sysTableLookup.parmQuery(query);
+        sysTableLookup.performFormLookup();
+    }
+
+    public static void addAccountByCriteria(str _criteriaValueStr, str _valueStr, str _throughStr, SC_CategoryId _categoryId)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+        MainAccount             mainAccountLookup;
+        switch(_criteriaValueStr)
+        {
+            case enum2Str(SC_OperatorCriteria::BeginsWith):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like strFmt("%1*",_valueStr);
+                break;
+
+            case enum2str(SC_OperatorCriteria::isBetweenAndInclude):
+                
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId >= _valueStr&&
+                        mainAccountLookup.MainAccountId <= _throughStr;
+                 
+                break;
+            case enum2str(SC_OperatorCriteria::IsLike):
+                
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like _valueStr;
+                break;
+
+            case enum2str(SC_OperatorCriteria::EndsWith):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like strFmt("*%1",_valueStr);
+                break;
+            case enum2str(SC_OperatorCriteria::isBetween):
+ 
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId > _valueStr&&
+                        mainAccountLookup.MainAccountId < _throughStr;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThan):
+               
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId > _valueStr;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThanAndInclude):
+ 
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId >= _valueStr;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThan):
+ 
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId < _valueStr;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThanAndInclude):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId <= _valueStr;
+                break;
+            case enum2str(SC_OperatorCriteria::Is):
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId)
+                        select MainAccountId ,_categoryId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId == _valueStr;
+                break;
+        }
+    }
+
+    public static void addDimensionByCriteria(str _criteriaValueStr, str _valueStr, str _throughStr, str _dimensionAttribute, str _dimensionValue,SC_CategoryId _categoryId)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+        SC_MainAccountsDim      mainAccountsDim;
+        switch(_criteriaValueStr)
+        {
+            case enum2Str(SC_OperatorCriteria::BeginsWith):
+               
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isBetweenAndInclude):
+                
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId >= _valueStr&&
+                        categoryMainAccounts.MainAccountId <= _throughStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                 
+                break;
+            case enum2str(SC_OperatorCriteria::IsLike):
+                
+                insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::EndsWith):
+
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like strFmt("*%1",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+            case enum2str(SC_OperatorCriteria::isBetween):
+ 
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr&&
+                        categoryMainAccounts.MainAccountId < _throughStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThan):
+               
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThanAndInclude):
+ 
+                insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThan):
+ 
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId < _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThanAndInclude):
+
+                insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId <= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+            case enum2str(SC_OperatorCriteria::Is):
+                    insert_recordset mainAccountsDim(CategoryMainAccounts, DimensionAttribute,DimensionValue)
+                        select RecId ,_dimensionAttribute, _dimensionValue
+                        from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId == _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+        }
+    }
+
+    public static void deleteByCriteria(str _criteriaValueStr, str _valueStr, str _throughStr, SC_CategoryId _categoryId)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+
+        switch(_criteriaValueStr)
+        {
+            case enum2Str(SC_OperatorCriteria::BeginsWith):
+
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId ;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isBetweenAndInclude):
+                
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.MainAccountId <= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId ;
+                break;
+            case enum2str(SC_OperatorCriteria::IsLike):
+                
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::EndsWith):
+
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like strFmt("*%1",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+            case enum2str(SC_OperatorCriteria::isBetween):
+ 
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.MainAccountId < _throughStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThan):
+               
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThanAndInclude):
+ 
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThan):
+ 
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId < _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThanAndInclude):
+
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId <= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+            case enum2str(SC_OperatorCriteria::Is):
+                    delete_from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId == _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId;
+                break;
+
+        }
+    }
+
+    public static void deleteDimensionByCriteria(str _criteriaValueStr, str _valueStr, str _throughStr, SC_CategoryId _categoryId, str _dimensionAttribute, str _dimensionValue)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+        SC_MainAccountsDim      mainAccountsDim;
+        switch(_criteriaValueStr)
+        {
+            case enum2Str(SC_OperatorCriteria::BeginsWith):
+
+                while select RecId from categoryMainAccounts
+                    where categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+            //delete_from mainAccountsDim
+            //        where categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr) &&
+            //        categoryMainAccounts.CategoryId == _categoryId ;
+            //break;
+
+            case enum2str(SC_OperatorCriteria::isBetweenAndInclude):
+                while select RecId from categoryMainAccounts
+                   where categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.MainAccountId <= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                //delete_from categoryMainAccounts
+                //    where categoryMainAccounts.MainAccountId >= _valueStr &&
+                //    categoryMainAccounts.MainAccountId <= _valueStr &&
+                //    categoryMainAccounts.CategoryId == _categoryId ;
+                break;
+            case enum2str(SC_OperatorCriteria::IsLike):
+                
+                   while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::EndsWith):
+
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId like strFmt("*%1",_valueStr) &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+            case enum2str(SC_OperatorCriteria::isBetween):
+ 
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.MainAccountId < _throughStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThan):
+               
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThanAndInclude):
+ 
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThan):
+ 
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId < _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId != 0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                    {
+                        info("no Record found matching the criteria");
+                    }
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThanAndInclude):
+
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId <= _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+            case enum2str(SC_OperatorCriteria::Is):
+                    while select RecId from categoryMainAccounts
+                        where categoryMainAccounts.MainAccountId == _valueStr &&
+                        categoryMainAccounts.CategoryId == _categoryId
+                {
+                    select forupdate mainAccountsDim
+                        where mainAccountsDim.CategoryMainAccounts == categoryMainAccounts.RecId &&
+                        mainAccountsDim.DimensionAttribute == _dimensionAttribute && mainAccountsDim.DimensionValue == _dimensionValue;
+                    if(mainAccountsDim.RecId!=0)
+                    {
+                        ttsbegin;
+                        mainAccountsDim.delete();
+                        ttscommit;
+                    }
+                    else
+                        warning("No record was found matching the criteria.");
+                }
+                break;
+
+        }
+    }
+
+    public static void insertIntoCategoryMainAccount(str _criteriaValueStr, str _valueStr, str _throughStr,SC_CategoryId _categoryId,RecId _criteriaRecId)
+    {
+        MainAccount             mainAccountLookup;
+        SC_categoryMainAccounts categoryMainAccounts;
+        switch(_criteriaValueStr)
+        {
+            case enum2Str(SC_OperatorCriteria::BeginsWith):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like strFmt("%1*",_valueStr)
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+                break;
+
+            case enum2str(SC_OperatorCriteria::isBetweenAndInclude):
+                
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId >= _valueStr &&
+                        mainAccountLookup.MainAccountId <= _throughStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+                
+                break;
+            case enum2str(SC_OperatorCriteria::IsLike):
+                
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like strFmt("*%1*",_valueStr)
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+
+            case enum2str(SC_OperatorCriteria::EndsWith):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId like strFmt("*%1",_valueStr)
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+            case enum2str(SC_OperatorCriteria::isBetween):
+                
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId > _valueStr 
+                        && mainAccountLookup.MainAccountId < _throughStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThan):
+               
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId > _valueStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+
+            case enum2str(SC_OperatorCriteria::isGreaterThanAndInclude):
+ 
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId >= _valueStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThan):
+ 
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId < _valueStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+
+            case enum2str(SC_OperatorCriteria::isLessThanAndInclude):
+
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId <= _valueStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+            case enum2str(SC_OperatorCriteria::Is):
+                    insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                        from mainAccountLookup
+                        where mainAccountLookup.MainAccountId == _valueStr
+                        && mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+            case enum2str(SC_OperatorCriteria::AllAccounts):
+                insert_recordset categoryMainAccounts(MainAccountId,CategoryId,MainAccountsCriteria)
+                        select MainAccountId ,_categoryId,_criteriaRecId
+                    from mainAccountLookup
+                    where mainAccountLookup.LedgerChartOfAccounts == LedgerChartOfAccounts::current();
+
+                break;
+        }
+    }
+
+    public static boolean validateDuplicatedCategoryMainAccount(SC_OperatorCriteria _criteriaValue, str _valueStr, str _throughStr,SC_CategoryId _categoryId)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+
+        switch(_criteriaValue)
+        {
+            case SC_OperatorCriteria::BeginsWith:
+                select firstonly RecId from categoryMainAccounts
+                    where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr);
+                break;
+
+            case SC_OperatorCriteria::isBetweenAndInclude:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.MainAccountId <= _throughStr;
+                
+                break;
+            case SC_OperatorCriteria::IsLike:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId like strFmt("*%1*",_valueStr);
+
+                break;
+
+            case SC_OperatorCriteria::EndsWith:
+
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId like strFmt("*%1",_valueStr);
+
+                break;
+            case SC_OperatorCriteria::isBetween:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.MainAccountId < _throughStr;
+                
+                break;
+
+            case SC_OperatorCriteria::isGreaterThan:
+               
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId > _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isGreaterThanAndInclude:
+ 
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId >= _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isLessThan:
+ 
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId < _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isLessThanAndInclude:
+
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId <= _valueStr;
+
+                break;
+            case SC_OperatorCriteria::Is:
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                        categoryMainAccounts.MainAccountId == _valueStr;
+
+                break;
+            case SC_OperatorCriteria::AllAccounts:
+                select firstonly RecId from categoryMainAccounts
+                    where categoryMainAccounts.CategoryId == _categoryId;
+                break;
+            default:
+                return false;
+        }
+        return (categoryMainAccounts.RecId !=0);
+
+    }
+
+    public static boolean validateDuplicatedCategoryMainAccountOnUpdate(SC_OperatorCriteria _criteriaValue, str _valueStr, str _throughStr,SC_CategoryId _categoryId,RecId _mainAccountsCriteriaRecId)
+    {
+        SC_categoryMainAccounts categoryMainAccounts;
+
+        switch(_criteriaValue)
+        {
+            case SC_OperatorCriteria::BeginsWith:
+                select firstonly RecId from categoryMainAccounts
+                    where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                    categoryMainAccounts.MainAccountId like strFmt("%1*",_valueStr);
+                break;
+
+            case SC_OperatorCriteria::isBetweenAndInclude:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId >= _valueStr &&
+                        categoryMainAccounts.MainAccountId <= _throughStr;
+                
+                break;
+            case SC_OperatorCriteria::IsLike:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId like strFmt("*%1*",_valueStr);
+
+                break;
+
+            case SC_OperatorCriteria::EndsWith:
+
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId like strFmt("*%1",_valueStr);
+
+                break;
+            case SC_OperatorCriteria::isBetween:
+                
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId > _valueStr &&
+                        categoryMainAccounts.MainAccountId < _throughStr;
+                
+                break;
+
+            case SC_OperatorCriteria::isGreaterThan:
+               
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId > _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isGreaterThanAndInclude:
+ 
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId >= _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isLessThan:
+ 
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId < _valueStr;
+
+                break;
+
+            case SC_OperatorCriteria::isLessThanAndInclude:
+
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId <= _valueStr;
+
+                break;
+            case SC_OperatorCriteria::Is:
+                select firstonly RecId from categoryMainAccounts
+                        where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId &&
+                        categoryMainAccounts.MainAccountId == _valueStr;
+
+                break;
+            case SC_OperatorCriteria::AllAccounts:
+                select firstonly RecId from categoryMainAccounts
+                    where categoryMainAccounts.CategoryId == _categoryId &&
+                    categoryMainAccounts.MainAccountsCriteria != _mainAccountsCriteriaRecId;
+                break;
+            default:
+                return false;
+        }
+        return (categoryMainAccounts.RecId !=0);
+
+    }
+
+    public static boolean validateMainAccount(SC_OperatorCriteria _criteriaValue, str _valueStr, str _throughStr)
+    {
+        MainAccount mainAccountLookup;
+
+        switch(_criteriaValue)
+        {
+            case SC_OperatorCriteria::BeginsWith:
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId like strFmt("%1*",_valueStr);
+                break;
+
+            case SC_OperatorCriteria::isBetweenAndInclude:
+                
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId >= _valueStr &&
+                        mainAccountLookup.MainAccountId <= _throughStr;
+                break;
+
+            case SC_OperatorCriteria::IsLike:
+                
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId like strFmt("*%1*",_valueStr);
+                break;
+
+            case SC_OperatorCriteria::EndsWith:
+
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId like strFmt("*%1",_valueStr);
+                break;
+
+            case SC_OperatorCriteria::isBetween:
+                
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId > _valueStr &&
+                        mainAccountLookup.MainAccountId < _throughStr;
+                break;
+
+            case SC_OperatorCriteria::isGreaterThan:
+               
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId > _valueStr;
+                break;
+
+            case SC_OperatorCriteria::isGreaterThanAndInclude:
+ 
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId >= _valueStr;
+                break;
+
+            case SC_OperatorCriteria::isLessThan:
+ 
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId < _valueStr;
+                break;
+
+            case SC_OperatorCriteria::isLessThanAndInclude:
+
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId <= _valueStr;
+                break;
+
+            case SC_OperatorCriteria::Is:
+                select firstonly RecId from mainAccountLookup
+                    where mainAccountLookup.MainAccountId == _valueStr;
+                break;
+
+            case SC_OperatorCriteria::AllAccounts:
+                select firstonly RecId from mainAccountLookup;
+                break;
+
+            default:
+                return false;
+        }
+        return (mainAccountLookup.RecId !=0);
+
+    }
+
+}
