@@ -1,0 +1,96 @@
+public class SC_CategoryAccountsCriteria extends common
+{
+    
+
+
+    /// <summary>
+    ///
+    /// </summary>
+    public void insert()
+    {
+        //    MainAccount             mainAccountLookup;
+        //    SC_categoryMainAccounts categoryMainAccounts;
+        if(SC_MainAccDim_Handler::validateDuplicatedCategoryMainAccount(this.OperatorCriteria,this.Value,this.Through,this.CategoryId))
+        {
+            warning("Overlab Exists");
+            return;
+        }
+        super();
+
+        //SC_CategoryId categoryId = this.CategoryId;
+        //RecId criteriaRecId = this.RecId;
+        ttsbegin;
+        SC_MainAccDim_Handler::insertIntoCategoryMainAccount(enum2Str(this.OperatorCriteria),this.Value,this.Through,this.CategoryId,this.RecId);
+        ttscommit;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <returns></returns>
+    public boolean validateWrite()
+    {
+        boolean ret;
+    
+        ret = super();
+        if ((this.OperatorCriteria ==SC_OperatorCriteria::IsBetween && this.Through < this.Value) ||
+            (this.OperatorCriteria ==SC_OperatorCriteria::IsBetweenAndInclude && this.Through < this.Value))
+            return checkFailed("Through should be greater than Value");
+
+        if(this.OperatorCriteria != SC_OperatorCriteria::AllAccounts && this.Value == "")
+            return checkFailed("Value is Mandatory");
+
+        //if(SC_MainAccDim_Handler::validateDuplicatedCategoryMainAccount(this.OperatorCriteria,this.Value,this.Through,this.CategoryId))
+        //    return checkFailed("Overlab exists.");
+        
+        if(!SC_MainAccDim_Handler::validateMainAccount(this.OperatorCriteria,this.Value,this.Through))
+            return checkFailed("Invalid or not found Main Account value.");
+        
+        return ret;
+            
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    public void update()
+    {
+        SC_CategoryMainAccounts categoryMainAccounts;
+        if(SC_MainAccDim_Handler::validateDuplicatedCategoryMainAccountOnUpdate(this.OperatorCriteria,this.Value,this.Through,this.CategoryId,this.RecId))
+        {
+            warning("Overlab Exists");
+            return;
+        }
+        super();
+        delete_from categoryMainAccounts
+            where categoryMainAccounts.MainAccountsCriteria == this.RecId;
+        ttsbegin;
+        SC_MainAccDim_Handler::insertIntoCategoryMainAccount(enum2Str(this.OperatorCriteria),this.Value,this.Through,this.CategoryId,this.RecId);
+        ttscommit;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    /// <param name = "_fieldId"></param>
+    public void modifiedField(FieldId _fieldId)
+    {
+        super(_fieldId);
+        switch(_fieldId)
+        {
+            case fieldNum(SC_CategoryAccountsCriteria, OperatorCriteria):
+                if(this.OperatorCriteria == SC_OperatorCriteria::AllAccounts )
+                {
+                    this.Value = "";
+                    this.Through = "";
+                }
+                if( this.OperatorCriteria != SC_OperatorCriteria::IsBetween ||
+                    this.OperatorCriteria != SC_OperatorCriteria::IsBetweenAndInclude)
+                    this.Through = "";
+
+                break;
+
+        }
+    }
+
+}
