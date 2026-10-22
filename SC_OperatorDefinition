@@ -1,0 +1,15 @@
+public class SC_OperatorDefinition
+{
+    public static const str hasEndStars = "@SYS306439";
+    public static const str hasStartStars = "@SYS339196";
+    public static const str isBetween = "@SYS306441";
+    public static const str isBetweenAndInclude = "@SYS306433";
+    public static const str OperatorEqualsText = "@SYS306440";
+    public static const str isGreaterThan = "@SYS306435";
+    public static const str isGreaterThanAndInclude = "@SYS306434";
+    public static const str isLessThan = "@SYS306436";
+    public static const str isLessThanAndInclude = "@SYS306437";
+    public static const str hasStartEndStars = "@SYS306438";
+    public static const str isStar = "All Accounts";
+    public static const str pureNumber = "Pure Number";
+}
