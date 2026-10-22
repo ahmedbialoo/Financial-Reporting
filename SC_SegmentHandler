@@ -1,0 +1,250 @@
+internal final class SC_SegmentHandler
+{
+    public static str defineSegment( str _segmentPart)
+    {
+        str partDefinition;
+
+        if(SC_SegmentHandler::hasEndStars(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::hasEndStars(_segmentPart);
+
+        if(SC_SegmentHandler::hasStartStars(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::hasStartStars(_segmentPart);
+        
+        if(SC_SegmentHandler::hasStartEndStars(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::hasStartEndStars(_segmentPart);
+
+        if(SC_SegmentHandler::isBetween(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isBetween(_segmentPart);
+
+        if(SC_SegmentHandler::isBetweenAndInclude(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isBetweenAndInclude(_segmentPart);
+
+        if(SC_SegmentHandler::isGreaterThan(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isGreaterThan(_segmentPart);
+
+        if(SC_SegmentHandler::isGreaterThanAndInclude(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isGreaterThanAndInclude(_segmentPart);
+
+        if(SC_SegmentHandler::isLessThan(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isLessThan(_segmentPart);
+
+        if(SC_SegmentHandler::isLessThanAndInclude(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isLessThanAndInclude(_segmentPart);
+
+        if(SC_SegmentHandler::isStar(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isStar(_segmentPart);
+        if(SC_SegmentHandler::isPureNumber(_segmentPart) != "")
+            partDefinition = SC_SegmentHandler::isPureNumber(_segmentPart);
+
+        
+        return partDefinition;
+
+    }
+
+    public static List listOfSeparatedTxt(str _text,str _pattern)
+    {
+        list parts;
+        parts = strSplit(_text, _pattern);
+        
+        return parts;
+    }
+
+    public static str hasStartEndStars(str text)
+    {
+       
+        boolean isStar = (SC_SegmentHandler::isStar(text) != "") ;
+        boolean hasStartEndStars = (strStartsWith(text, '*') && strEndsWith(text, '*'));
+        if(!isStar && hasStartEndStars)
+            return SC_OperatorDefinition::hasStartEndStars;
+
+        return "";
+    }
+
+    public static str isPureNumber(str s)
+    {
+        real r;
+
+        // Must contain only digits, no spaces
+        if (!strScan(s, '[^0-9]', 1, 1))
+        {
+            r = str2num(s);
+
+            if(num2str0(r, 0, 0, 0, 0) == s)
+                return SC_OperatorDefinition::pureNumber;
+        }
+
+        return "";
+    }
+
+    public static str isStar(str text)
+    {
+        boolean strStartsWith = strStartsWith(text, '*');
+        if(strLen(text) == 1 && strStartsWith )
+            return SC_OperatorDefinition::isStar;
+
+        return "";
+    }
+
+    public static str hasEndStars(str text)
+    {
+        boolean strEndsWith = strEndsWith(text, '*') ;
+        
+        boolean isBetweenAndInclude = (SC_SegmentHandler::isBetweenAndInclude(text) != "") ;
+        boolean isStar = (SC_SegmentHandler::isStar(text)!="") ;
+        boolean hasStartEndStars = (SC_SegmentHandler::hasStartEndStars(text) != "") ;
+        boolean isGreaterThanAndInclude = (SC_SegmentHandler::isGreaterThanAndInclude(text) != "") ;
+        
+        if (!isGreaterThanAndInclude && !hasStartEndStars && !isBetweenAndInclude && !isStar && strEndsWith )
+            return SC_OperatorDefinition::hasEndStars;
+
+        return "";
+    }
+
+    public static str hasStartStars(str text)
+    {
+        boolean strStartsWith = strStartsWith(text, '*') ;
+
+        boolean isStar = (SC_SegmentHandler::isStar(text) != "") ;
+        boolean hasStartEndStars = (SC_SegmentHandler::hasStartEndStars(text) != "") ;
+        boolean isLessThanAndInclude = (SC_SegmentHandler::isLessThanAndInclude(text) != "") ;
+
+        if (!isLessThanAndInclude && !hasStartEndStars && !isStar && strStartsWith )
+            return SC_OperatorDefinition::hasStartStars;
+
+        return "";
+    }
+
+    public static str isGreaterThan(str text)
+    {
+        boolean isGreaterThan = strStartsWith(text, '>');
+
+        if(isGreaterThan)
+            return SC_OperatorDefinition::isGreaterThan;
+
+        return "";
+    }
+
+    public static str isLessThan(str text)
+    {
+        boolean isLessThan = strStartsWith(text, '<');
+
+        if(isLessThan)
+            return SC_OperatorDefinition::isLessThan;
+
+        return "";
+    }
+
+    public static str isBetween(str text)
+    {
+        boolean isBetween = (strScan(text, "<..<", 1, strLen(text)) > 0);
+
+        if(isBetween)
+            return SC_OperatorDefinition::isBetween;
+
+        return "";
+
+    }
+
+    public static str isBetweenAndInclude(str text)
+    {
+        int pos = strScan(text, "..", 1, strLen(text));
+        
+        boolean isBetween = (SC_SegmentHandler::isBetween(text)!="") ;
+        boolean isGreaterThanAndInclude = (SC_SegmentHandler::isGreaterThanAndInclude(text) != "") ;
+        boolean isLessThanAndInclude = (SC_SegmentHandler::isLessThanAndInclude(text) != "") ;
+
+        
+        if(!isBetween  && !isLessThanAndInclude && !isGreaterThanAndInclude && pos > 0)
+            return SC_OperatorDefinition::isBetweenAndInclude;
+        
+        return "";
+    }
+
+    public static str isLessThanAndInclude(str text)
+    {
+        boolean isLessThanAndInclude = strStartsWith(text, '*..');
+
+        if(isLessThanAndInclude)
+            return SC_OperatorDefinition::isLessThanAndInclude;
+
+        return "";
+    }
+
+     public static str isGreaterThanAndInclude(str text)
+    {
+        boolean isGreaterThanAndInclude = strEndsWith(text, '..*');
+
+        if(isGreaterThanAndInclude)
+            return SC_OperatorDefinition::isGreaterThanAndInclude;
+
+        return "";
+    }
+
+    public static str extractBetweenStars(str text)
+    {
+        if (strStartsWith(text, '*') && strEndsWith(text, '*'))
+        {
+            return subStr(text, 2, strLen(text) - 2);
+        }
+
+        return '';
+    }
+
+    public static container extractBeforeAfter(str _text, str _pattern)
+    {
+        str beforeValue = "";
+        str afterValue  = "";
+
+        int pos = strScan(_text, _pattern, 1, strLen(_text));
+
+        if (pos > 0)
+        {
+            beforeValue = subStr(_text, 1, pos - 1);
+            afterValue  = subStr(_text, pos + strLen(_pattern), strLen(_text));
+        }
+
+        return [beforeValue, afterValue];
+    }
+
+    public static str extractBefore(str text, str pattern)
+    {
+        str before;
+        int pos = strScan(text, pattern, 1, strLen(text));
+
+        if (pos > 0)
+        {
+            before = subStr(text, 1, pos - 1);
+            return before;
+        }
+        else
+        {
+            before = "";
+            return before;
+        }
+    }
+
+    public static str extractAfter(str text, str pattern)
+    {
+        str after;
+        int pos = strScan(text, pattern, 1, strLen(text));
+
+        if (pos > 0)
+        {
+            after = subStr(text, pos+1, strLen(text));
+            return after; 
+        }
+        else
+        {
+            after = "";
+            return after;
+
+        }
+    }
+
+    public static void main(Args _args)
+    {
+       
+        
+    }
+
+}
