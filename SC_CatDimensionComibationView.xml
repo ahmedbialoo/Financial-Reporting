@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AxView xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+	<Name>SC_CatDimensionComibationView</Name>
+	<SourceCode>
+		<Declaration><![CDATA[
+public class SC_CatDimensionComibationView extends common
+{
+    
+
+}
+]]></Declaration>
+		<Methods />
+	</SourceCode>
+	<SubscriberAccessLevel>
+		<Read>Allow</Read>
+	</SubscriberAccessLevel>
+	<FieldGroups>
+		<AxTableFieldGroup>
+			<Name>AutoReport</Name>
+			<Fields />
+		</AxTableFieldGroup>
+		<AxTableFieldGroup>
+			<Name>AutoLookup</Name>
+			<Fields />
+		</AxTableFieldGroup>
+		<AxTableFieldGroup>
+			<Name>AutoIdentification</Name>
+			<AutoPopulate>Yes</AutoPopulate>
+			<Fields />
+		</AxTableFieldGroup>
+		<AxTableFieldGroup>
+			<Name>AutoSummary</Name>
+			<Fields />
+		</AxTableFieldGroup>
+		<AxTableFieldGroup>
+			<Name>AutoBrowse</Name>
+			<Fields />
+		</AxTableFieldGroup>
+	</FieldGroups>
+	<Fields>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>CategoryId</Name>
+			<DataField>CategoryId</DataField>
+			<DataSource>SC_Category</DataSource>
+		</AxViewField>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>MainAccountId</Name>
+			<DataField>MainAccountId</DataField>
+			<DataSource>SC_CategoryMainAccounts</DataSource>
+		</AxViewField>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>DimensionAttribute</Name>
+			<DataField>DimensionAttribute</DataField>
+			<DataSource>SC_MainAccountsDim</DataSource>
+		</AxViewField>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>DimensionValue</Name>
+			<DataField>DimensionValue</DataField>
+			<DataSource>SC_MainAccountsDim</DataSource>
+		</AxViewField>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>DisplayValue</Name>
+			<DataField>DisplayValue</DataField>
+			<DataSource>DimensionAttributeValueCombination</DataSource>
+		</AxViewField>
+		<AxViewField xmlns=""
+			i:type="AxViewFieldBound">
+			<Name>ValueCombinationRecId</Name>
+			<DataField>RecId</DataField>
+			<DataSource>DimensionAttributeValueCombination</DataSource>
+		</AxViewField>
+	</Fields>
+	<Indexes />
+	<Mappings />
+	<Relations />
+	<StateMachines />
+	<ViewMetadata>
+		<Name>Metadata</Name>
+		<SourceCode>
+			<Methods />
+		</SourceCode>
+		<DataSources>
+			<AxQuerySimpleRootDataSource>
+				<Name>SC_Category</Name>
+				<DynamicFields>Yes</DynamicFields>
+				<Table>SC_Category</Table>
+				<DataSources>
+					<AxQuerySimpleEmbeddedDataSource>
+						<Name>SC_CategoryMainAccounts</Name>
+						<DynamicFields>Yes</DynamicFields>
+						<Table>SC_CategoryMainAccounts</Table>
+						<DataSources>
+							<AxQuerySimpleEmbeddedDataSource>
+								<Name>SC_MainAccountsDim</Name>
+								<DynamicFields>Yes</DynamicFields>
+								<Table>SC_MainAccountsDim</Table>
+								<DataSources>
+									<AxQuerySimpleEmbeddedDataSource>
+										<Name>DimensionAttributeValueCombination</Name>
+										<DynamicFields>Yes</DynamicFields>
+										<Table>DimensionAttributeValueCombination</Table>
+										<DataSources>
+											<AxQuerySimpleEmbeddedDataSource>
+												<Name>DimensionAttributeLevelValueView</Name>
+												<DynamicFields>Yes</DynamicFields>
+												<Table>DimensionAttributeLevelValueView</Table>
+												<DataSources>
+													<AxQuerySimpleEmbeddedDataSource>
+														<Name>DimensionAttribute</Name>
+														<DynamicFields>Yes</DynamicFields>
+														<Table>DimensionAttribute</Table>
+														<DataSources />
+														<DerivedDataSources />
+														<Fields />
+														<Ranges />
+														<Relations>
+															<AxQuerySimpleDataSourceRelation>
+																<Name>QueryDataSourceRelation1</Name>
+																<Field>DimensionAttribute</Field>
+																<JoinDataSource>DimensionAttributeLevelValueView</JoinDataSource>
+																<RelatedField>RecId</RelatedField>
+															</AxQuerySimpleDataSourceRelation>
+															<AxQuerySimpleDataSourceRelation>
+																<Name>QueryDataSourceRelation2</Name>
+																<Field>DimensionAttribute</Field>
+																<JoinDataSource>SC_MainAccountsDim</JoinDataSource>
+																<RelatedField>Name</RelatedField>
+															</AxQuerySimpleDataSourceRelation>
+														</Relations>
+													</AxQuerySimpleEmbeddedDataSource>
+												</DataSources>
+												<DerivedDataSources />
+												<Fields />
+												<Ranges />
+												<Relations>
+													<AxQuerySimpleDataSourceRelation>
+														<Name>QueryDataSourceRelation1</Name>
+														<Field>RecId</Field>
+														<JoinDataSource>DimensionAttributeValueCombination</JoinDataSource>
+														<RelatedField>ValueCombinationRecId</RelatedField>
+													</AxQuerySimpleDataSourceRelation>
+												</Relations>
+											</AxQuerySimpleEmbeddedDataSource>
+										</DataSources>
+										<DerivedDataSources />
+										<Fields />
+										<Ranges />
+										<Relations>
+											<AxQuerySimpleDataSourceRelation>
+												<Name>QueryDataSourceRelation1</Name>
+												<Field>MainAccountId</Field>
+												<JoinDataSource>SC_CategoryMainAccounts</JoinDataSource>
+												<RelatedField>MainAccountValue</RelatedField>
+											</AxQuerySimpleDataSourceRelation>
+										</Relations>
+									</AxQuerySimpleEmbeddedDataSource>
+								</DataSources>
+								<DerivedDataSources />
+								<Fields />
+								<Ranges />
+								<JoinMode>OuterJoin</JoinMode>
+								<UseRelations>Yes</UseRelations>
+								<Relations />
+							</AxQuerySimpleEmbeddedDataSource>
+						</DataSources>
+						<DerivedDataSources />
+						<Fields />
+						<Ranges />
+						<UseRelations>Yes</UseRelations>
+						<Relations />
+					</AxQuerySimpleEmbeddedDataSource>
+				</DataSources>
+				<DerivedDataSources />
+				<Fields />
+				<Ranges />
+				<GroupBy />
+				<Having />
+				<OrderBy />
+			</AxQuerySimpleRootDataSource>
+		</DataSources>
+	</ViewMetadata>
+</AxView>
